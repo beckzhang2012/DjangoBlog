@@ -1,0 +1,51 @@
+{% extends 'share_layout/base.html' %}
+{% load i18n %}
+{% load static %}
+
+{% block title %}{% trans 'Notifications' %}{% endblock %}
+
+{% block main %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <h2>{% trans 'Notifications' %}</h2>
+            
+            {% if notifications.filter(is_read=0).count > 0 %}
+                <a href="{% url 'notifications:mark_all_as_read' %}" class="btn btn-sm btn-primary mb-3">
+                    {% trans 'Mark all as read' %}
+                </a>
+            {% endif %}
+            
+            {% if notifications %}
+                <div class="list-group">
+                    {% for notification in notifications %}
+                        <a href="{% if notification.content_object %}{{ notification.content_object.get_absolute_url }}{% else %}{% url 'notifications:mark_as_read' notification.id %}{% endif %}" 
+                           class="list-group-item list-group-item-action {% if notification.is_read == 0 %}list-group-item-primary{% endif %}">
+                            
+                            {% if notification.notification_type == 'comment_reply' %}
+                                <i class="fa fa-comment"></i> {% trans 'Comment Reply' %}
+                            {% elif notification.notification_type == 'system' %}
+                                <i class="fa fa-bell"></i> {% trans 'System Notification' %}
+                            {% elif notification.notification_type == 'audit' %}
+                                <i class="fa fa-check"></i> {% trans 'Article Approval' %}
+                            {% endif %}
+                            
+                            <p class="mb-1">
+                                {% if notification.sender %}
+                                    <strong>{{ notification.sender.username }}</strong> 
+                                {% endif %}
+                                {{ notification.content }}
+                            </p>
+                            <small>{{ notification.creation_time }}</small>
+                        </a>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="alert alert-info" role="alert">
+                    {% trans 'No notifications yet.' %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
