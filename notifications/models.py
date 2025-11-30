@@ -31,10 +31,19 @@ class Notification(models.Model):
         choices=NotificationType.choices,
         verbose_name=_('Notification Type')
     )
-    title = models.CharField(max_length=200, verbose_name=_('Title'))
-    content = models.TextField(_('Content'))
+    title = models.CharField(max_length=200, verbose_name=_('Title'), default='')
+    content = models.TextField(_('Content'), default='')
     related_object_id = models.BigIntegerField(null=True, blank=True, verbose_name=_('Related Object ID'))
     related_content_type_id = models.IntegerField(null=True, blank=True, verbose_name=_('Related Content Type ID'))
+    content_type = models.ForeignKey(
+        ContentType,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        verbose_name=_('Content Type')
+    )
+    object_id = models.PositiveIntegerField(null=True, blank=True, verbose_name=_('Object ID'))
+    content_object = GenericForeignKey('content_type', 'object_id')
     is_read = models.IntegerField(default=0, verbose_name=_('Is Read'))
     read_time = models.DateTimeField(null=True, blank=True, verbose_name=_('Read Time'))
     creation_time = models.DateTimeField(auto_now_add=True, verbose_name=_('Created At'))

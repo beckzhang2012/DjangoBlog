@@ -10,6 +10,26 @@
         <div class="col-md-8 offset-md-2">
             <h2>{% trans 'Notifications' %}</h2>
             
+            <!-- Filter and search form -->
+            <form method="get" class="mb-3">
+                <div class="row">
+                    <div class="col-md-4">
+                        <select name="type" class="form-control">
+                            <option value="" {% if not notification_type %}selected{% endif %}>{% trans 'All types' %}</option>
+                            <option value="comment_reply" {% if notification_type == 'comment_reply' %}selected{% endif %}>{% trans 'Comment Reply' %}</option>
+                            <option value="system" {% if notification_type == 'system' %}selected{% endif %}>{% trans 'System Notification' %}</option>
+                            <option value="audit" {% if notification_type == 'audit' %}selected{% endif %}>{% trans 'Article Approval' %}</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <input type="text" name="search" class="form-control" placeholder="{% trans 'Search notifications...' %}" value="{{ search_query }}">
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary btn-block">{% trans 'Filter' %}</button>
+                    </div>
+                </div>
+            </form>
+            
             {% if notifications.filter(is_read=0).count > 0 %}
                 <a href="{% url 'notifications:mark_all_as_read' %}" class="btn btn-sm btn-primary mb-3">
                     {% trans 'Mark all as read' %}

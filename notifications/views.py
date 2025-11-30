@@ -10,7 +10,26 @@ from .forms import SystemNotificationForm
 @login_required
 def notification_list(request):
     notifications = request.user.notifications.all()
-    return render(request, 'notifications/notification_list.html', {'notifications': notifications})
+    
+    # Filter by type
+    notification_type = request.GET.get('type')
+    if notification_type:
+        notifications = notifications.filter(notification_type=notification_type)
+    
+    # Search by content
+    search_query = request.GET.get('search')
+    if search_query:
+        notifications = notifications.filter(content__icontains=search_query)
+    
+    # Count unread notifications
+    unread_count = request.user.notifications.filter(is_read=0).count()
+    
+    return render(request, 'notifications/notification_list.html', {
+        'notifications': notifications,
+        'unread_count': unread_count,
+        'notification_type': notification_type,
+        'search_query': search_query
+    })
 
 
 @login_required
