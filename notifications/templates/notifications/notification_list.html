@@ -1,0 +1,71 @@
+{% extends 'share_layout/base.html' %}
+{% load i18n %}
+{% load static %}
+
+{% block title %}{% trans 'Notifications' %}{% endblock %}
+
+{% block main %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <h2>{% trans 'Notifications' %}</h2>
+            
+            <!-- Filter and search form -->
+            <form method="get" class="mb-3">
+                <div class="row">
+                    <div class="col-md-4">
+                        <select name="type" class="form-control">
+                            <option value="" {% if not notification_type %}selected{% endif %}>{% trans 'All types' %}</option>
+                            <option value="comment_reply" {% if notification_type == 'comment_reply' %}selected{% endif %}>{% trans 'Comment Reply' %}</option>
+                            <option value="system" {% if notification_type == 'system' %}selected{% endif %}>{% trans 'System Notification' %}</option>
+                            <option value="audit" {% if notification_type == 'audit' %}selected{% endif %}>{% trans 'Article Approval' %}</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <input type="text" name="search" class="form-control" placeholder="{% trans 'Search notifications...' %}" value="{{ search_query }}">
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary btn-block">{% trans 'Filter' %}</button>
+                    </div>
+                </div>
+            </form>
+            
+            {% if notifications.filter(is_read=0).count > 0 %}
+                <a href="{% url 'notifications:mark_all_as_read' %}" class="btn btn-sm btn-primary mb-3">
+                    {% trans 'Mark all as read' %}
+                </a>
+            {% endif %}
+            
+            {% if notifications %}
+                <div class="list-group">
+                    {% for notification in notifications %}
+                        <a href="{% if notification.content_object %}{{ notification.content_object.get_absolute_url }}{% else %}{% url 'notifications:mark_as_read' notification.id %}{% endif %}" 
+                           class="list-group-item list-group-item-action {% if notification.is_read == 0 %}list-group-item-primary{% endif %}">
+                            
+                            {% if notification.notification_type == 'comment_reply' %}
+                                <i class="fa fa-comment"></i> {% trans 'Comment Reply' %}
+                            {% elif notification.notification_type == 'system' %}
+                                <i class="fa fa-bell"></i> {% trans 'System Notification' %}
+                            {% elif notification.notification_type == 'audit' %}
+                                <i class="fa fa-check"></i> {% trans 'Article Approval' %}
+                            {% endif %}
+                            
+                            <p class="mb-1">
+                                {% if notification.sender %}
+                                    <strong>{{ notification.sender.username }}</strong> 
+                                {% endif %}
+                                {{ notification.content }}
+                            </p>
+                            <small>{{ notification.creation_time }}</small>
+                        </a>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="alert alert-info" role="alert">
+                    {% trans 'No notifications yet.' %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

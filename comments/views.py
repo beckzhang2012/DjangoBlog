@@ -56,6 +56,16 @@ class CommentPostView(FormView):
             parent_comment = Comment.objects.get(
                 pk=form.cleaned_data['parent_comment_id'])
             comment.parent_comment = parent_comment
+            
+            # Send notification to the parent comment author
+            from notifications.models import Notification
+            Notification.objects.create(
+                recipient=parent_comment.author,
+                sender=author,
+                notification_type='comment_reply',
+                message=f'{author.username} replied to your comment: {form.cleaned_data["body"][:50]}...',
+                content_object=comment
+            )
 
         comment.save(True)
         return HttpResponseRedirect(

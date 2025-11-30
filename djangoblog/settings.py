@@ -61,7 +61,8 @@ INSTALLED_APPS = [
     'servermanager',
     'owntracks',
     'compressor',
-    'djangoblog'
+    'djangoblog',
+    'notifications'
 ]
 
 MIDDLEWARE = [
@@ -94,7 +95,8 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'blog.context_processors.seo_processor'
+                'blog.context_processors.seo_processor',
+                'notifications.context_processors.unread_notifications'
             ],
         },
     },

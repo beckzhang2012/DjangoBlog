@@ -1,0 +1,18 @@
+{% extends 'admin/base_site.html' %}
+{% load i18n %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <h2>{% trans 'Send System Notification' %}</h2>
+            
+            <form method="post">
+                {% csrf_token %}
+                {{ form.as_p }}
+                <button type="submit" class="btn btn-primary">{% trans 'Send' %}</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
