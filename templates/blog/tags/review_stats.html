@@ -1,0 +1,20 @@
+{% load i18n %}
+{% if pending_comments > 0 or pending_articles > 0 %}
+<aside id="review-stats" class="widget widget_review_stats">
+    <p class="widget-title">{% trans 'Review Statistics' %}</p>
+    <ul>
+        {% if pending_comments > 0 %}
+            <li><a href="/servermanager/pending-review/?type=comment">{% trans 'Pending Comments' %}: {{ pending_comments }}</a></li>
+        {% endif %}
+        {% if pending_articles > 0 %}
+            <li><a href="/servermanager/pending-review/?type=article">{% trans 'Pending Articles' %}: {{ pending_articles }}</a></li>
+        {% endif %}
+        {% if comment_approval_rate > 0 %}
+            <li>{% trans 'Comment Approval Rate' %}: {{ comment_approval_rate }}%</li>
+        {% endif %}
+        {% if article_approval_rate > 0 %}
+            <li>{% trans 'Article Approval Rate' %}: {{ article_approval_rate }}%</li>
+        {% endif %}
+    </ul>
+</aside>
+{% endif %}

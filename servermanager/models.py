@@ -1,4 +1,9 @@
+from django.conf import settings
 from django.db import models
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
+from django.utils.timezone import now
+from django.utils.translation import gettext_lazy as _
 
 
 # Create your models here.
@@ -31,3 +36,62 @@ class EmailSendLog(models.Model):
         verbose_name = '邮件发送log'
         verbose_name_plural = verbose_name
         ordering = ['-creation_time']
+
+
+class ReviewHistory(models.Model):
+    """审核历史记录"""
+    REVIEW_TYPE_CHOICES = (
+        ('comment', _('Comment')),
+        ('article', _('Article')),
+    )
+    
+    REVIEW_RESULT_CHOICES = (
+        ('approved', _('Approved')),
+        ('rejected', _('Rejected')),
+        ('need_modification', _('Need Modification')),
+    )
+    
+    # 审核相关信息
+    review_type = models.CharField(
+        _('review type'),
+        max_length=10,
+        choices=REVIEW_TYPE_CHOICES,
+        blank=False,
+        null=False
+    )
+    reviewer = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name=_('reviewer'),
+        on_delete=models.CASCADE
+    )
+    review_time = models.DateTimeField(
+        _('review time'),
+        default=now,
+        blank=False,
+        null=False
+    )
+    result = models.CharField(
+        _('review result'),
+        max_length=20,
+        choices=REVIEW_RESULT_CHOICES,
+        blank=False,
+        null=False
+    )
+    comment = models.TextField(
+        _('review comment'),
+        blank=True,
+        null=True
+    )
+    
+    # 关联被审核的内容（评论或文章）
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField()
+    content_object = GenericForeignKey('content_type', 'object_id')
+    
+    def __str__(self):
+        return f"{self.get_review_type_display()} review by {self.reviewer.username} on {self.review_time}"
+    
+    class Meta:
+        ordering = ['-review_time']
+        verbose_name = _('review history')
+        verbose_name_plural = _('review histories')

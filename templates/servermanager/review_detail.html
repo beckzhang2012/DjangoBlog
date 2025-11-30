@@ -1,0 +1,148 @@
+{% extends 'share_layout/base.html' %}
+{% load i18n %}
+{% load static %}
+{% load blog_tags %}
+
+{% block header %}
+    <title>{% trans 'Review Detail' %} - {{ SITE_NAME }}</title>
+{% endblock %}
+
+{% block content %}
+    <div class="page-header">
+        <h1>{% trans 'Review Detail' %}</h1>
+        <a href="{% url 'servermanager:pending_review' %}" class="btn btn-secondary">{% trans 'Back to Pending' %}</a>
+    </div>
+    
+    <!-- Content Detail -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3 class="card-title">
+                {% if content_type == 'comment' %}
+                    {% trans 'Comment' %}
+                {% else %}
+                    {% trans 'Article' %}
+                {% endif %}
+            </h3>
+        </div>
+        <div class="card-body">
+            {% if content_type == 'comment' %}
+                <div class="mb-3">
+                    <h4>{% trans 'Content' %}</h4>
+                    <p>{{ content.body|comment_markdown }}</p>
+                </div>
+                <div class="mb-3">
+                    <h4>{% trans 'Article' %}</h4>
+                    <a href="{% url 'blog:article_detail' article_id=content.article.id %}" target="_blank">{{ content.article.title }}</a>
+                </div>
+            {% else %}
+                <div class="mb-3">
+                    <h4>{% trans 'Title' %}</h4>
+                    <p>{{ content.title }}</p>
+                </div>
+                <div class="mb-3">
+                    <h4>{% trans 'Content' %}</h4>
+                    <div class="article-content">
+                        {{ content.body|custom_markdown }}
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <h4>{% trans 'Categories' %}</h4>
+                    {% for category in content.category.all %}
+                        <span class="badge badge-primary">{{ category.name }}</span>
+                    {% endfor %}
+                </div>
+                <div class="mb-3">
+                    <h4>{% trans 'Tags' %}</h4>
+                    {% for tag in content.tags.all %}
+                        <span class="badge badge-secondary">{{ tag.name }}</span>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            
+            <div class="mb-3">
+                <h4>{% trans 'Author' %}</h4>
+                <p>{{ content.author.username }}</p>
+            </div>
+            <div class="mb-3">
+                <h4>{% trans 'Created' %}</h4>
+                <p>{{ content.creation_time|date:"Y-m-d H:i" }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Previous Review History -->
+    {% if review_history.exists %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3 class="card-title">{% trans 'Previous Review History' %}</h3>
+        </div>
+        <div class="card-body">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>{% trans 'Reviewer' %}</th>
+                        <th>{% trans 'Result' %}</th>
+                        <th>{% trans 'Comment' %}</th>
+                        <th>{% trans 'Time' %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for history in review_history %}
+                    <tr>
+                        <td>{{ history.reviewer.username }}</td>
+                        <td>
+                            {% if history.result == 'approved' %}
+                                <span class="badge badge-success">{% trans 'Approved' %}</span>
+                            {% elif history.result == 'rejected' %}
+                                <span class="badge badge-danger">{% trans 'Rejected' %}</span>
+                            {% else %}
+                                <span class="badge badge-warning">{% trans 'Need Modification' %}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ history.comment|default:"-" }}</td>
+                        <td>{{ history.review_time|date:"Y-m-d H:i" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Review Form -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">{% trans 'Submit Review' %}</h3>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="form-group">
+                    <label for="result">{% trans 'Review Result' %}</label>
+                    <select name="result" id="result" class="form-control" required>
+                        <option value="approved">{% trans 'Approve' %}</option>
+                        <option value="rejected">{% trans 'Reject' %}</option>
+                        <option value="need_modification">{% trans 'Need Modification' %}</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="comment">{% trans 'Review Comment' %}</label>
+                    <textarea name="comment" id="comment" class="form-control" rows="5" placeholder="{% trans 'Enter your review comment here...' %}"></textarea>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">{% trans 'Submit Review' %}</button>
+            </form>
+        </div>
+    </div>
+{% endblock %}
+
+{% block compress_css %}
+    <style>
+        .article-content {
+            max-height: 600px;
+            overflow: auto;
+        }
+    </style>
+{% endblock %}
