@@ -1,0 +1,178 @@
+{% extends 'share_layout/base.html' %}
+{% load i18n %}
+{% load static %}
+
+{% block header %}
+    <title>{% trans 'Pending Review' %} - {{ SITE_NAME }}</title>
+{% endblock %}
+
+{% block content %}
+    <div class="page-header">
+        <h1>{% trans 'Pending Review' %}</h1>
+        <p class="lead">{% trans 'Manage comments and articles waiting for review.' %}</p>
+    </div>
+    
+    <!-- Filter and Search -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <form method="get" class="form-inline">
+                <div class="form-group mr-3">
+                    <label for="type" class="mr-2">{% trans 'Filter by:' %}</label>
+                    <select name="type" id="type" class="form-control" onchange="this.form.submit()">
+                        <option value="all" {% if review_type == 'all' %}selected{% endif %}>{% trans 'All' %}</option>
+                        <option value="comment" {% if review_type == 'comment' %}selected{% endif %}>{% trans 'Comments' %} ({{ pending_comments_count }})</option>
+                        <option value="article" {% if review_type == 'article' %}selected{% endif %}>{% trans 'Articles' %} ({{ pending_articles_count }})</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <input type="text" name="q" id="q" class="form-control" placeholder="{% trans 'Search...' %}" value="{{ search_query }}">
+                    <button type="submit" class="btn btn-primary ml-2">{% trans 'Search' %}</button>
+                </div>
+            </form>
+        </div>
+        <div class="col-md-4 text-right">
+            <a href="{% url 'servermanager:review_statistics' %}" class="btn btn-info">
+                {% trans 'Review Statistics' %}
+            </a>
+        </div>
+    </div>
+    
+    <!-- Batch Review Form -->
+    <form method="post" action="{% url 'servermanager:batch_review' %}" id="batch-review-form">
+        {% csrf_token %}
+        
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">{% trans 'Pending Items' %} ({{ items|length }})</h3>
+                <div class="card-tools">
+                    <div class="btn-group">
+                        <button type="submit" name="result" value="approved" class="btn btn-success btn-sm" onclick="return confirm('{% trans 'Are you sure you want to approve selected items?' %}')">
+                            {% trans 'Approve Selected' %}
+                        </button>
+                        <button type="submit" name="result" value="rejected" class="btn btn-danger btn-sm" onclick="return confirm('{% trans 'Are you sure you want to reject selected items?' %}')">
+                            {% trans 'Reject Selected' %}
+                        </button>
+                        <button type="submit" name="result" value="need_modification" class="btn btn-warning btn-sm" onclick="return confirm('{% trans 'Are you sure you want to mark selected items as needing modification?' %}')">
+                            {% trans 'Need Modification' %}
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th style="width: 30px;">
+                                    <div class="custom-control custom-checkbox">
+                                        <input type="checkbox" id="select-all" class="custom-control-input">
+                                        <label for="select-all" class="custom-control-label"></label>
+                                    </div>
+                                </th>
+                                <th>{% trans 'Title/Content' %}</th>
+                                <th>{% trans 'Author' %}</th>
+                                <th>{% trans 'Created' %}</th>
+                                <th>{% trans 'Type' %}</th>
+                                <th>{% trans 'Actions' %}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in items %}
+                            <tr>
+                                <td>
+                                    <div class="custom-control custom-checkbox">
+                                        <input type="checkbox" name="item_ids" value="{{ item.id }}" class="custom-control-input item-checkbox">
+                                        <input type="hidden" name="content_types" value="{% if item.__class__.__name__ == 'Comment' %}comment{% else %}article{% endif %}">
+                                        <label class="custom-control-label"></label>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if item.__class__.__name__ == 'Comment' %}
+                                        <div class="comment-content">
+                                            {{ item.body|truncatechars:200 }}
+                                            <br>
+                                            <small class="text-muted">
+                                                {% trans 'Article:' %} <a href="{% url 'blog:article_detail' article_id=item.article.id %}" target="_blank">{{ item.article.title }}</a>
+                                            </small>
+                                        </div>
+                                    {% else %}
+                                        <a href="{% url 'servermanager:review_detail' content_type='article' object_id=item.id %}">
+                                            {{ item.title }}
+                                        </a>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if item.__class__.__name__ == 'Comment' %}
+                                        {{ item.author.username }}
+                                    {% else %}
+                                        {{ item.author.username }}
+                                    {% endif %}
+                                </td>
+                                <td>{{ item.creation_time|date:"Y-m-d H:i" }}</td>
+                                <td>
+                                    {% if item.__class__.__name__ == 'Comment' %}
+                                        <span class="badge badge-primary">{% trans 'Comment' %}</span>
+                                    {% else %}
+                                        <span class="badge badge-secondary">{% trans 'Article' %}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{% url 'servermanager:review_detail' content_type=item.__class__.__name__|lower object_id=item.id %}" class="btn btn-sm btn-primary">
+                                        {% trans 'Review' %}
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center">{% trans 'No pending items found.' %}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </form>
+    
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <div class="mt-4">
+        <nav aria-label="Page navigation">
+            <ul class="pagination">
+                {% if page_obj.has_previous %}
+                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">{% trans 'Previous' %}</a></li>
+                {% endif %}
+                {% for i in paginator.page_range %}
+                    {% if page_obj.number == i %}
+                        <li class="page-item active"><a class="page-link" href="#">{{ i }}</a></li>
+                    {% else %}
+                        <li class="page-item"><a class="page-link" href="?page={{ i }}">{{ i }}</a></li>
+                    {% endif %}
+                {% endfor %}
+                {% if page_obj.has_next %}
+                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">{% trans 'Next' %}</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+{% endblock %}
+
+{% block compress_css %}
+    <style>
+        .comment-content {
+            max-height: 100px;
+            overflow: hidden;
+        }
+    </style>
+{% endblock %}
+
+{% block compress_js %}
+    <script>
+        // Select all checkboxes
+        document.getElementById('select-all').addEventListener('change', function() {
+            const checkboxes = document.querySelectorAll('.item-checkbox');
+            checkboxes.forEach(checkbox => checkbox.checked = this.checked);
+        });
+    </script>
+{% endblock %}
