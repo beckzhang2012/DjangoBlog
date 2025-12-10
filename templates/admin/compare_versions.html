@@ -1,0 +1,86 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style type="text/css">
+.diff-container {
+    margin: 20px 0;
+    padding: 15px;
+    border: 1px solid #e1e4e8;
+    border-radius: 4px;
+}
+.diff-title {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+.diff-section {
+    margin-bottom: 30px;
+}
+.diff-section-title {
+    font-size: 14px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    color: #24292e;
+}
+.diff-equal {
+    background-color: transparent;
+}
+.diff-insert {
+    background-color: #d4f8d4;
+    padding: 2px 4px;
+    border-radius: 2px;
+}
+.diff-delete {
+    background-color: #ffdce0;
+    text-decoration: line-through;
+    padding: 2px 4px;
+    border-radius: 2px;
+}
+.diff-meta {
+    font-size: 12px;
+    color: #6a737d;
+    margin-bottom: 10px;
+}
+.diff-body {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    line-height: 1.6;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="module">
+    <h1>{% blocktrans with v1=diff_data.version1.version_number v2=diff_data.version2.version_number %}Compare Version {{ v1 }} vs Version {{ v2 }}{% endblocktrans %}</h1>
+    
+    <div class="diff-meta">
+        <p><strong>{% trans 'Article:' %}</strong> <a href="{% url 'admin:blog_article_change' diff_data.version1.article.id %}">{{ diff_data.version1.article.title }}</a></p>
+        <p><strong>{% trans 'Version' %} {{ diff_data.version1.version_number }}:</strong> {% blocktrans with time=diff_data.version1.creation_time|date:"Y-m-d H:i:s" user=diff_data.version1.editor %}Created at {{ time }} by {{ user }}{% endblocktrans %}</p>
+        <p><strong>{% trans 'Version' %} {{ diff_data.version2.version_number }}:</strong> {% blocktrans with time=diff_data.version2.creation_time|date:"Y-m-d H:i:s" user=diff_data.version2.editor %}Created at {{ time }} by {{ user }}{% endblocktrans %}</p>
+    </div>
+
+    <div class="diff-section">
+        <div class="diff-section-title">{% trans 'Title Differences' %}</div>
+        <div class="diff-container">
+            <div class="diff-body">{{ diff_data.title_diff|safe }}</div>
+        </div>
+    </div>
+
+    <div class="diff-section">
+        <div class="diff-section-title">{% trans 'Body Differences' %}</div>
+        <div class="diff-container">
+            <div class="diff-body">{{ diff_data.body_diff|safe }}</div>
+        </div>
+    </div>
+
+    <div class="submit-row">
+        <a href="{% url 'admin:blog_articleversion_changelist' %}" class="button">{% trans 'Back to version list' %}</a>
+        <a href="{% url 'admin:blog_article_change' diff_data.version1.article.id %}" class="button">{% trans 'View article' %}</a>
+    </div>
+</div>
+{% endblock %}
