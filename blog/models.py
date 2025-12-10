@@ -13,6 +13,7 @@ from uuslug import slugify
 
 from djangoblog.utils import cache_decorator, cache
 from djangoblog.utils import get_current_site
+from comments.models import AuditStatus
 
 logger = logging.getLogger(__name__)
 
@@ -81,6 +82,12 @@ class Article(BaseModel):
         max_length=1,
         choices=STATUS_CHOICES,
         default='p')
+    audit_status = models.CharField(
+        _('audit status'),
+        max_length=20,
+        choices=AuditStatus.choices,
+        default=AuditStatus.PENDING
+    )
     comment_status = models.CharField(
         _('comment status'),
         max_length=1,
