@@ -13,6 +13,13 @@ import os
 import sys
 from pathlib import Path
 
+# Use PyMySQL instead of mysqlclient
+try:
+    import pymysql
+    pymysql.install_as_MySQLdb()
+except ImportError:
+    pass
+
 from django.utils.translation import gettext_lazy as _
 
 

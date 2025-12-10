@@ -58,6 +58,35 @@ class BaseModel(models.Model):
         pass
 
 
+class ArticleVersion(BaseModel):
+    """文章版本历史"""
+    article = models.ForeignKey(
+        'Article',
+        verbose_name=_('article'),
+        on_delete=models.CASCADE,
+        related_name='versions'
+    )
+    version_number = models.PositiveIntegerField(_('version number'), default=1)
+    title = models.CharField(_('title'), max_length=200)
+    body = MDTextField(_('body'))
+    editor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name=_('editor'),
+        blank=False,
+        null=False,
+        on_delete=models.CASCADE
+    )
+    comment = models.CharField(_('version comment'), max_length=200, blank=True, null=True, help_text=_('Brief description of changes in this version'))
+
+    def __str__(self):
+        return f"{self.article.title} - Version {self.version_number}"
+
+    class Meta:
+        ordering = ['-version_number']
+        verbose_name = _('article version')
+        verbose_name_plural = _('article versions')
+
+
 class Article(BaseModel):
     """文章"""
     STATUS_CHOICES = (
@@ -118,11 +147,13 @@ class Article(BaseModel):
         get_latest_by = 'id'
 
     def get_absolute_url(self):
+        # 使用 pub_time 如果 creation_time 为 None
+        time_to_use = self.creation_time if self.creation_time else self.pub_time
         return reverse('blog:detailbyid', kwargs={
             'article_id': self.id,
-            'year': self.creation_time.year,
-            'month': self.creation_time.month,
-            'day': self.creation_time.day
+            'year': time_to_use.year,
+            'month': time_to_use.month,
+            'day': time_to_use.day
         })
 
     @cache_decorator(60 * 60 * 10)
@@ -133,6 +164,31 @@ class Article(BaseModel):
         return names
 
     def save(self, *args, **kwargs):
+        # 获取当前用户
+        from django.contrib.auth import get_user
+        user = get_user(kwargs.pop('request', None)) if 'request' in kwargs else None
+        
+        # 如果是更新操作，创建版本记录
+        if self.pk and user and user.is_authenticated:
+            try:
+                old_article = Article.objects.get(pk=self.pk)
+                # 检查标题或内容是否有变化
+                if old_article.title != self.title or old_article.body != self.body:
+                    # 获取最新版本号
+                    last_version = self.versions.order_by('-version_number').first()
+                    new_version_number = last_version.version_number + 1 if last_version else 1
+                    
+                    # 创建新版本
+                    ArticleVersion.objects.create(
+                        article=self,
+                        version_number=new_version_number,
+                        title=old_article.title,
+                        body=old_article.body,
+                        editor=user
+                    )
+            except Article.DoesNotExist:
+                pass
+                
         super().save(*args, **kwargs)
 
     def viewed(self):
