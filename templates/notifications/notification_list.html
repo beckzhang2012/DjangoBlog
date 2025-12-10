@@ -1,0 +1,199 @@
+{% extends 'share_layout/base.html' %}
+{% load i18n %}
+{% load static %}
+
+{% block title %}{% trans '通知中心' %}{% endblock %}
+
+{% block main %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-3">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <h3 class="panel-title">{% trans '通知中心' %}</h3>
+                </div>
+                <div class="list-group">
+                    <a href="{% url 'notifications:list' %}" class="list-group-item {% if active_type == 'all' %}active{% endif %}">
+                        {% trans '所有通知' %}
+                    </a>
+                    <a href="{% url 'notifications:list' %}?type=comment_reply" class="list-group-item {% if active_type == 'comment_reply' %}active{% endif %}">
+                        {% trans '评论回复' %}
+                    </a>
+                    <a href="{% url 'notifications:list' %}?type=system_notice" class="list-group-item {% if active_type == 'system_notice' %}active{% endif %}">
+                        {% trans '系统通知' %}
+                    </a>
+                    <a href="{% url 'notifications:list' %}?type=article_review" class="list-group-item {% if active_type == 'article_review' %}active{% endif %}">
+                        {% trans '文章审核' %}
+                    </a>
+                    <a href="{% url 'notifications:list' %}?is_read=false" class="list-group-item {% if request.GET.is_read == 'false' %}active{% endif %}">
+                        {% trans '未读通知' %}
+                    </a>
+                    {% if user.is_superuser %}
+                    <a href="{% url 'notifications:send_system_notification' %}" class="list-group-item">
+                        {% trans '发送系统通知' %}
+                    </a>
+                    {% endif %}
+                </div>
+                <div class="panel-body">
+                    <a href="{% url 'notifications:mark_all_read' %}" class="btn btn-default btn-sm">
+                        {% trans '标记所有已读' %}
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-9">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <div class="row">
+                        <div class="col-md-8">
+                            {% if active_type == 'all' %}
+                                {% trans '所有通知' %}
+                            {% elif active_type == 'comment_reply' %}
+                                {% trans '评论回复' %}
+                            {% elif active_type == 'system_notice' %}
+                                {% trans '系统通知' %}
+                            {% elif active_type == 'article_review' %}
+                                {% trans '文章审核' %}
+                            {% elif request.GET.is_read == 'false' %}
+                                {% trans '未读通知' %}
+                            {% endif %}
+                            <span class="badge">{{ page_obj.paginator.count }}</span>
+                        </div>
+                        <div class="col-md-4">
+                            <form method="get" class="form-inline pull-right">
+                                <div class="input-group input-group-sm">
+                                    <input type="text" name="search" class="form-control" placeholder="{% trans '搜索通知' %}" value="{{ search_query }}">
+                                    <span class="input-group-btn">
+                                        <button class="btn btn-default" type="submit">{% trans '搜索' %}</button>
+                                    </span>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="panel-body notification-list">
+                    {% for notification in notifications %}
+                    <div class="media notification-item {% if not notification.is_read %}unread{% endif %}" data-notification-id="{{ notification.id }}">
+                        <div class="media-left">
+                            {% if notification.sender %}
+                                <img class="media-object img-rounded" src="{% static 'account/img/avatar.png' %}" alt="{{ notification.sender.username }}" width="48" height="48">
+                            {% else %}
+                                <img class="media-object img-rounded" src="{% static 'blog/img/system-icon.png' %}" alt="{% trans '系统通知' %}" width="48" height="48">
+                            {% endif %}
+                        </div>
+                        <div class="media-body">
+                            <h4 class="media-heading">
+                                {% if notification.url %}
+                                    <a href="{{ notification.url }}" class="notification-title" onclick="markAsRead({{ notification.id }})">
+                                {% else %}
+                                    <span class="notification-title">
+                                {% endif %}
+                                {{ notification.title }}
+                                {% if notification.url %}</a>{% else %}</span>{% endif %}
+                                {% if not notification.is_read %}
+                                    <span class="label label-danger">{% trans '未读' %}</span>
+                                {% endif %}
+                            </h4>
+                            <p class="notification-content">{{ notification.content|linebreaksbr }}</p>
+                            <p class="notification-meta">
+                                {% if notification.sender %}
+                                    {% trans '来自' %}: {{ notification.sender.username }} |
+                                {% else %}
+                                    {% trans '系统通知' %} |
+                                {% endif %}
+                                {{ notification.created_time|date:"Y-m-d H:i" }}
+                                {% if not notification.is_read %}
+                                    <a href="javascript:void(0);" class="mark-as-read" onclick="markAsRead({{ notification.id }})">
+                                        {% trans '标记已读' %}
+                                    </a>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="empty-notifications text-center">
+                        <p><i class="fa fa-bell-o fa-3x"></i></p>
+                        <p>{% trans '暂无通知' %}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% if is_paginated %}
+                <div class="panel-footer">
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination pagination-sm">
+                            {% if page_obj.has_previous %}
+                            <li><a href="?page={{ page_obj.previous_page_number }}{% if active_type %}&type={{ active_type }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}{% if request.GET.is_read %}&is_read={{ request.GET.is_read }}{% endif %}" aria-label="Previous"><span aria-hidden="true">&laquo;</span></a></li>
+                            {% endif %}
+                            {% for page in paginator.page_range %}
+                            <li {% if page == page_obj.number %}class="active"{% endif %}><a href="?page={{ page }}{% if active_type %}&type={{ active_type }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}{% if request.GET.is_read %}&is_read={{ request.GET.is_read }}{% endif %}">{{ page }}</a></li>
+                            {% endfor %}
+                            {% if page_obj.has_next %}
+                            <li><a href="?page={{ page_obj.next_page_number }}{% if active_type %}&type={{ active_type }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}{% if request.GET.is_read %}&is_read={{ request.GET.is_read }}{% endif %}" aria-label="Next"><span aria-hidden="true">&raquo;</span></a></li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_script %}
+<script>
+function markAsRead(notificationId) {
+    $.post("{% url 'notifications:mark_as_read' 0 %}".replace('0', notificationId), function(data) {
+        if (data.status === 'success') {
+            $(`.notification-item[data-notification-id="${notificationId}"]`).removeClass('unread');
+            $(`.notification-item[data-notification-id="${notificationId}"] .label-danger`).remove();
+            $(`.notification-item[data-notification-id="${notificationId}"] .mark-as-read`).remove();
+            
+            // 更新导航栏计数
+            var count = parseInt($('.unread-count').text());
+            if (count > 0) {
+                $('.unread-count').text(count - 1);
+                if (count - 1 === 0) {
+                    $('.unread-count').hide();
+                }
+            }
+        }
+    });
+}
+</script>
+{% endblock %}
+
+{% block extra_style %}
+<style>
+.notification-item {
+    padding: 15px 0;
+    border-bottom: 1px solid #eee;
+}
+.notification-item:last-child {
+    border-bottom: none;
+}
+.notification-item.unread {
+    background-color: #fcf8e3;
+}
+.notification-title {
+    color: #333;
+}
+.notification-content {
+    color: #666;
+    margin: 5px 0;
+}
+.notification-meta {
+    color: #999;
+    font-size: 12px;
+}
+.mark-as-read {
+    margin-left: 10px;
+    color: #5bc0de;
+    cursor: pointer;
+}
+.empty-notifications {
+    padding: 50px 0;
+    color: #999;
+}
+</style>
+{% endblock %}
