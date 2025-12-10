@@ -1,0 +1,119 @@
+{% extends 'share_layout/base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans 'Notifications' %}{% endblock %}
+
+{% block main %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="page-header">
+                <h1>{% trans 'Notifications' %}</h1>
+            </div>
+            
+            <!-- 筛选和搜索 -->
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <form method="get" action="" class="form-inline">
+                        <select name="type" class="form-control mr-2" onchange="this.form.submit()">
+                            <option value="" {% if not notification_type %}selected{% endif %}>{% trans 'All Types' %}</option>
+                            <option value="comment_reply" {% if notification_type == 'comment_reply' %}selected{% endif %}>{% trans 'Comment Replies' %}</option>
+                            <option value="system_notice" {% if notification_type == 'system_notice' %}selected{% endif %}>{% trans 'System Notices' %}</option>
+                            <option value="article_approved" {% if notification_type == 'article_approved' %}selected{% endif %}>{% trans 'Article Approved' %}</option>
+                            <option value="article_rejected" {% if notification_type == 'article_rejected' %}selected{% endif %}>{% trans 'Article Rejected' %}</option>
+                        </select>
+                        
+                        <div class="input-group">
+                            <input type="text" name="search" class="form-control" placeholder="{% trans 'Search notifications...' %}" value="{{ search_keyword }}">
+                            <div class="input-group-append">
+                                <button type="submit" class="btn btn-primary">{% trans 'Search' %}</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="col-md-6 text-right">
+                    <form method="post" action="{% url 'accounts:notification_mark_all_as_read' %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-primary">{% trans 'Mark all as read' %}</button>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- 通知列表 -->
+            <div class="list-group">
+                {% for notification in page_obj %}
+                <a href="{% if notification.target_url %}{{ notification.target_url }}{% else %}#{% endif %}" 
+                   class="list-group-item list-group-item-action {% if not notification.is_read %}list-group-item-warning{% endif %}"
+                   onclick="markAsRead({{ notification.id }})">
+                    
+                    <div class="d-flex w-100 justify-content-between">
+                        <h5 class="mb-1">
+                            {% if notification.notification_type == 'comment_reply' %}
+                                <i class="fas fa-reply"></i> {{ notification.title }}
+                            {% elif notification.notification_type == 'system_notice' %}
+                                <i class="fas fa-bullhorn"></i> {{ notification.title }}
+                            {% elif notification.notification_type == 'article_approved' %}
+                                <i class="fas fa-check-circle"></i> {{ notification.title }}
+                            {% elif notification.notification_type == 'article_rejected' %}
+                                <i class="fas fa-times-circle"></i> {{ notification.title }}
+                            {% else %}
+                                {{ notification.title }}
+                            {% endif %}
+                        </h5>
+                        <small>{{ notification.created_time|date:"Y-m-d H:i" }}</small>
+                    </div>
+                    
+                    <p class="mb-1">{{ notification.content|safe }}</p>
+                    
+                    {% if notification.sender %}
+                    <small>{% trans 'From' %}: {{ notification.sender.username }}</small>
+                    {% endif %}
+                </a>
+                {% empty %}
+                <div class="list-group-item text-center">
+                    <i class="fas fa-inbox fa-3x mb-3 text-muted"></i>
+                    <p>{% trans 'No notifications yet' %}</p>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <!-- 分页 -->
+            {% if page_obj.paginator.num_pages > 1 %}
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if notification_type %}&type={{ notification_type }}{% endif %}{% if search_keyword %}&search={{ search_keyword }}{% endif %}">{% trans 'Previous' %}</a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in page_obj.paginator.page_range %}
+                    <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                        <a class="page-link" href="?page={{ num }}{% if notification_type %}&type={{ notification_type }}{% endif %}{% if search_keyword %}&search={{ search_keyword }}{% endif %}">{{ num }}</a>
+                    </li>
+                    {% endfor %}
+                    
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if notification_type %}&type={{ notification_type }}{% endif %}{% if search_keyword %}&search={{ search_keyword }}{% endif %}">{% trans 'Next' %}</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+function markAsRead(notificationId) {
+    // 发送AJAX请求标记为已读
+    fetch(`{% url 'accounts:notification_mark_as_read' 0 %}`.replace('0', notificationId), {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    });
+}
+</script>
+{% endblock %}
