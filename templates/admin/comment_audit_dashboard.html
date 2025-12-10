@@ -1,0 +1,103 @@
+{% extends 'admin/base_site.html' %}
+{% load i18n admin_urls static admin_list %}
+
+{% block extrastyle %}
+    {{ block.super }}
+    <style>
+        .audit-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: #fff;
+            border: 1px solid #e1e4e8;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .stat-card h3 {
+            margin: 0 0 10px 0;
+            color: #586069;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .stat-value.pending { color: #d93025; }
+        .stat-value.approved { color: #34a853; }
+        .stat-value.rejected { color: #fbbc05; }
+        .stat-value.mod { color: #4285f4; }
+        .pass-rate {
+            font-size: 18px;
+            color: #34a853;
+        }
+        .stat-footer {
+            font-size: 12px;
+            color: #6a737d;
+            margin-top: 10px;
+            border-top: 1px solid #eaecef;
+            padding-top: 10px;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="module">
+        <h2>{% trans 'Comment Audit Statistics Dashboard' %}</h2>
+        
+        <div class="audit-stats">
+            <div class="stat-card">
+                <h3>{% trans 'Total Comments' %}</h3>
+                <div class="stat-value">{{ total_comments }}</div>
+                <div class="stat-footer">{% trans 'Total comments received' %}</div>
+            </div>
+            
+            <div class="stat-card">
+                <h3>{% trans 'Pending Audit' %}</h3>
+                <div class="stat-value pending">{{ pending_count }}</div>
+                <div class="stat-footer">{% trans 'Waiting for review' %}</div>
+            </div>
+            
+            <div class="stat-card">
+                <h3>{% trans 'Approved' %}</h3>
+                <div class="stat-value approved">{{ approved_count }}</div>
+                <div class="stat-footer">{% trans 'Successfully reviewed' %}</div>
+            </div>
+            
+            <div class="stat-card">
+                <h3>{% trans 'Rejected' %}</h3>
+                <div class="stat-value rejected">{{ rejected_count }}</div>
+                <div class="stat-footer">{% trans 'Comments rejected' %}</div>
+            </div>
+            
+            <div class="stat-card">
+                <h3>{% trans 'Need Modification' %}</h3>
+                <div class="stat-value mod">{{ need_mod_count }}</div>
+                <div class="stat-footer">{% trans 'Require changes' %}</div>
+            </div>
+            
+            <div class="stat-card">
+                <h3>{% trans 'Approval Rate' %}</h3>
+                <div class="pass-rate">{{ pass_rate }}%</div>
+                <div class="stat-footer">{% trans 'Based on' %} {{ reviewed_count }} {% trans 'reviewed comments' %}</div>
+            </div>
+            
+            <div class="stat-card">
+                <h3>{% trans 'Total Audits' %}</h3>
+                <div class="stat-value">{{ total_audits }}</div>
+                <div class="stat-footer">{% trans 'Total audit operations performed' %}</div>
+            </div>
+        </div>
+        
+        <div class="actions">
+            <a href="{% url 'admin:comments_comment_changelist' %}" class="button">{% trans 'Go to Comment Audit' %}</a>
+            <a href="{% url 'admin:comments_commentaudithistory_changelist' %}" class="button">{% trans 'View Audit History' %}</a>
+        </div>
+    </div>
+{% endblock %}
