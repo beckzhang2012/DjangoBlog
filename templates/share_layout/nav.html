@@ -25,6 +25,18 @@
 
                 <a href="{% url "blog:archives" %}">{% trans 'Article archive' %}</a>
             </li>
+            {% if user.is_authenticated %}
+            <li class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-has-children">
+                <a href="{% url "accounts:notifications" %}">
+                    {% trans 'Notifications' %}
+                    {% with unread_count=user.get_unread_notifications_count %}
+                        {% if unread_count > 0 %}
+                        <span class="badge badge-danger ml-1">{{ unread_count }}</span>
+                        {% endif %}
+                    {% endwith %}
+                </a>
+            </li>
+            {% endif %}
         </ul>
     </div>
 </nav><!-- #site-navigation -->

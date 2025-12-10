@@ -1,4 +1,5 @@
 import logging
+import django
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
 from django.contrib import auth
@@ -7,6 +8,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth import logout
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.hashers import make_password
+from django.db.models import Q
 from django.http import HttpResponseRedirect, HttpResponseForbidden
 from django.http.request import HttpRequest
 from django.http.response import HttpResponse
@@ -20,6 +22,8 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.generic import FormView, RedirectView
+
+from .models import Notification
 
 from djangoblog.utils import send_email, get_sha256, get_current_site, generate_code, delete_sidebar_cache
 from . import utils
@@ -202,3 +206,64 @@ class ForgetPasswordEmailCode(View):
         utils.set_code(to_email, code)
 
         return HttpResponse("ok")
+
+
+# 通知相关视图
+class NotificationListView(View):
+    """通知列表页面"""
+    def get(self, request: HttpRequest):
+        if not request.user.is_authenticated:
+            return HttpResponseRedirect('/login/')
+        
+        # 获取筛选参数
+        notification_type = request.GET.get('type', '')
+        search_keyword = request.GET.get('search', '')
+        
+        # 获取用户的所有通知
+        notifications = request.user.notifications.all()
+        
+        # 按类型筛选
+        if notification_type:
+            notifications = notifications.filter(notification_type=notification_type)
+        
+        # 搜索功能
+        if search_keyword:
+            notifications = notifications.filter(
+                Q(title__icontains=search_keyword) | 
+                Q(content__icontains=search_keyword)
+            )
+        
+        # 分页
+        paginator = django.core.paginator.Paginator(notifications, 20)
+        page_number = request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+        
+        return render(request, 'account/notification_list.html', {
+            'page_obj': page_obj,
+            'notification_type': notification_type,
+            'search_keyword': search_keyword
+        })
+
+
+class NotificationMarkAsReadView(View):
+    """标记单条通知为已读"""
+    def get(self, request: HttpRequest, notification_id):
+        if not request.user.is_authenticated:
+            return HttpResponseRedirect('/login/')
+        
+        notification = get_object_or_404(Notification, pk=notification_id, recipient=request.user)
+        notification.mark_as_read()
+        
+        # 跳转回通知列表或目标链接
+        next_url = request.GET.get('next', reverse('accounts:notifications'))
+        return HttpResponseRedirect(next_url)
+
+
+class NotificationMarkAllAsReadView(View):
+    """标记所有通知为已读"""
+    def post(self, request: HttpRequest):
+        if not request.user.is_authenticated:
+            return HttpResponseRedirect('/login/')
+        
+        request.user.notifications.filter(is_read=False).update(is_read=True)
+        return HttpResponseRedirect(reverse('accounts:notifications'))

@@ -58,6 +58,22 @@ class CommentPostView(FormView):
             comment.parent_comment = parent_comment
 
         comment.save(True)
+        
+        # 发送评论回复通知
+        if comment.parent_comment:
+            from accounts.models import Notification
+            title = '您的评论收到了新回复'
+            content = f"用户{comment.author.username}回复了您的评论：{comment.body[:50]}..."
+            target_url = "%s#div-comment-%d" % (article.get_absolute_url(), comment.pk)
+            
+            Notification.objects.create(
+                recipient=comment.parent_comment.author,
+                sender=comment.author,
+                title=title,
+                content=content,
+                notification_type='comment_reply',
+                target_url=target_url
+            )
         return HttpResponseRedirect(
             "%s#div-comment-%d" %
             (article.get_absolute_url(), comment.pk))
