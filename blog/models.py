@@ -6,7 +6,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.urls import reverse
-from django.utils.timezone import now
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from mdeditor.fields import MDTextField
 from uuslug import slugify
@@ -27,8 +27,8 @@ class LinkShowType(models.TextChoices):
 
 class BaseModel(models.Model):
     id = models.AutoField(primary_key=True)
-    creation_time = models.DateTimeField(_('creation time'), default=now)
-    last_modify_time = models.DateTimeField(_('modify time'), default=now)
+    creation_time = models.DateTimeField(_('creation time'), default=timezone.now)
+    last_mod_time = models.DateTimeField(_('modify time'), default=timezone.now)
 
     def save(self, *args, **kwargs):
         is_update_views = isinstance(
@@ -75,7 +75,7 @@ class Article(BaseModel):
     title = models.CharField(_('title'), max_length=200, unique=True)
     body = MDTextField(_('body'))
     pub_time = models.DateTimeField(
-        _('publish time'), blank=False, null=False, default=now)
+        _('publish time'), blank=False, null=False, default=timezone.now)
     status = models.CharField(
         _('status'),
         max_length=1,
@@ -133,7 +133,61 @@ class Article(BaseModel):
         return names
 
     def save(self, *args, **kwargs):
+        # 保存前先获取当前用户
+        user = None
+        request = kwargs.pop('request', None)
+        
+        if request:
+            from django.contrib.auth.models import AnonymousUser
+            if hasattr(request, 'user') and not isinstance(request.user, AnonymousUser):
+                user = request.user
+        
+        # 如果没有获取到用户，则使用文章作者
+        if not user:
+            user = self.author
+        
+        # 只有当文章不是新建的时候才创建版本记录
+        if self.pk:
+            # 排除仅更新阅读量的情况
+            if 'update_fields' in kwargs and 'views' in kwargs['update_fields'] and len(kwargs['update_fields']) == 1:
+                super().save(*args, **kwargs)
+                return
+            
+            # 获取最新版本号
+            latest_version = self.versions.order_by('-version_number').first()
+            new_version_number = latest_version.version_number + 1 if latest_version else 1
+            
+            # 先保存当前文章以获取最新内容
+            super().save(*args, **kwargs)
+            
+            # 创建版本快照
+            ArticleVersion.objects.create(
+                article=self,
+                version_number=new_version_number,
+                title=self.title,
+                body=self.body,
+                author=user,
+                change_type='edit',
+                is_current=True
+            )
+            
+            # 将其他版本标记为非当前版本
+            ArticleVersion.objects.filter(article=self).exclude(version_number=new_version_number).update(is_current=False)
+            return
+        
+        # 新建文章时，先保存，然后创建初始版本
         super().save(*args, **kwargs)
+        
+        # 创建初始版本
+        ArticleVersion.objects.create(
+            article=self,
+            version_number=1,
+            title=self.title,
+            body=self.body,
+            author=user,
+            change_type='create',
+            is_current=True
+        )
 
     def viewed(self):
         self.views += 1
@@ -261,6 +315,27 @@ class Tag(BaseModel):
         verbose_name_plural = verbose_name
 
 
+class ArticleVersion(models.Model):
+    article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name='versions', verbose_name='关联的文章ID')
+    version_number = models.IntegerField(default=1, verbose_name='版本号，从1开始递增')
+    title = models.CharField(max_length=200, verbose_name='文章标题（版本快照）')
+    body = MDTextField(verbose_name='文章正文（版本快照）')
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, verbose_name='编辑者ID', null=True, blank=True)
+    edit_summary = models.CharField(max_length=500, null=True, blank=True, verbose_name='编辑摘要，说明本次修改内容')
+    creation_time = models.DateTimeField(default=timezone.now, verbose_name='版本创建时间')
+    is_current = models.BooleanField(default=False, verbose_name='是否为当前版本')
+    change_type = models.CharField(max_length=20, default='edit', verbose_name='变更类型：create/edit/rollback')
+
+    class Meta:
+        verbose_name = '文章版本'
+        verbose_name_plural = '文章版本'
+        ordering = ['-version_number']
+        unique_together = ('article', 'version_number')
+
+    def __str__(self):
+        return f'{self.article.title} - Version {self.version_number}'
+
+
 class Links(models.Model):
     """友情链接"""
 
@@ -274,8 +349,8 @@ class Links(models.Model):
         max_length=1,
         choices=LinkShowType.choices,
         default=LinkShowType.I)
-    creation_time = models.DateTimeField(_('creation time'), default=now)
-    last_mod_time = models.DateTimeField(_('modify time'), default=now)
+    creation_time = models.DateTimeField(_('creation time'), default=timezone.now)
+    last_mod_time = models.DateTimeField(_('modify time'), default=timezone.now)
 
     class Meta:
         ordering = ['sequence']
@@ -292,8 +367,8 @@ class SideBar(models.Model):
     content = models.TextField(_('content'))
     sequence = models.IntegerField(_('order'), unique=True)
     is_enable = models.BooleanField(_('is enable'), default=True)
-    creation_time = models.DateTimeField(_('creation time'), default=now)
-    last_mod_time = models.DateTimeField(_('modify time'), default=now)
+    creation_time = models.DateTimeField(_('creation time'), default=timezone.now)
+    last_mod_time = models.DateTimeField(_('modify time'), default=timezone.now)
 
     class Meta:
         ordering = ['sequence']
