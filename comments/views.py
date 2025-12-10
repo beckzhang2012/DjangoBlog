@@ -58,6 +58,16 @@ class CommentPostView(FormView):
             comment.parent_comment = parent_comment
 
         comment.save(True)
+        
+        # 发送评论回复通知
+        if comment.parent_comment:
+            from notifications.utils import send_comment_reply_notification
+            send_comment_reply_notification(
+                recipient=comment.parent_comment.author,
+                sender=author,
+                comment=comment,
+                parent_comment=comment.parent_comment
+            )
         return HttpResponseRedirect(
             "%s#div-comment-%d" %
             (article.get_absolute_url(), comment.pk))
