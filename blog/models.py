@@ -63,6 +63,39 @@ class Article(BaseModel):
     STATUS_CHOICES = (
         ('d', _('Draft')),
         ('p', _('Published')),
+        ('r', _('Review Pending')),
+    )
+    APPROVAL_STATUS_CHOICES = (
+        ('pending', _('Pending')),
+        ('approved', _('Approved')),
+        ('rejected', _('Rejected')),
+        ('need_modification', _('Need Modification')),
+    )
+    approval_status = models.CharField(
+        _('approval status'),
+        max_length=20,
+        choices=APPROVAL_STATUS_CHOICES,
+        default='pending',
+        blank=False,
+        null=False
+    )
+    approval_comment = models.TextField(
+        _('approval comment'),
+        blank=True,
+        null=True
+    )
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name=_('approved by'),
+        blank=True,
+        null=True,
+        on_delete=models.SET_NULL,
+        related_name='approved_articles'
+    )
+    approved_time = models.DateTimeField(
+        _('approved time'),
+        blank=True,
+        null=True
     )
     COMMENT_STATUS = (
         ('o', _('Open')),

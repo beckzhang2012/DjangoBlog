@@ -129,6 +129,55 @@ def get_markdown_toc(content):
     return mark_safe(toc)
 
 
+@register.inclusion_tag('blog/tags/review_stats.html')
+def load_review_stats():
+    """
+    加载审核统计数据
+    :return:
+    """
+    from servermanager.models import ReviewHistory
+    from comments.models import Comment
+    from blog.models import Article
+    from django.utils import timezone
+    
+    # 计算待审核数量
+    pending_comments = Comment.objects.filter(is_enable=False).count()
+    pending_articles = Article.objects.filter(
+        approval_status='pending',
+        status='r'
+    ).count()
+    
+    # 计算审核通过率
+    total_approved_comments = ReviewHistory.objects.filter(
+        review_type='comment',
+        result='approved'
+    ).count()
+    total_reviewed_comments = ReviewHistory.objects.filter(
+        review_type='comment'
+    ).count()
+    comment_approval_rate = 0
+    if total_reviewed_comments > 0:
+        comment_approval_rate = (total_approved_comments / total_reviewed_comments) * 100
+    
+    total_approved_articles = ReviewHistory.objects.filter(
+        review_type='article',
+        result='approved'
+    ).count()
+    total_reviewed_articles = ReviewHistory.objects.filter(
+        review_type='article'
+    ).count()
+    article_approval_rate = 0
+    if total_reviewed_articles > 0:
+        article_approval_rate = (total_approved_articles / total_reviewed_articles) * 100
+    
+    return {
+        'pending_comments': pending_comments,
+        'pending_articles': pending_articles,
+        'comment_approval_rate': round(comment_approval_rate, 1),
+        'article_approval_rate': round(article_approval_rate, 1)
+    }
+
+
 @register.filter()
 @stringfilter
 def comment_markdown(content):
