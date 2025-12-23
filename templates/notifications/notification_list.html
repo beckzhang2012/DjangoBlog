@@ -1,0 +1,179 @@
+{% extends 'share_layout/base.html' %}
+{% load i18n %}
+{% load static %}
+
+{% block title %}{% trans 'Notifications' %}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">{% trans 'Notifications' %}</h1>
+    
+    <!-- 筛选和搜索 -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="form-inline">
+                <div class="form-group mr-3">
+                    <label for="type" class="mr-2">{% trans 'Type' %}:</label>
+                    <select class="form-control" id="type" name="type">
+                        <option value="">{% trans 'All Types' %}</option>
+                        <option value="comment_reply" {% if selected_type == 'comment_reply' %}selected{% endif %}>{% trans 'Comment Reply' %}</option>
+                        <option value="system_notice" {% if selected_type == 'system_notice' %}selected{% endif %}>{% trans 'System Notice' %}</option>
+                        <option value="article_approved" {% if selected_type == 'article_approved' %}selected{% endif %}>{% trans 'Article Approved' %}</option>
+                    </select>
+                </div>
+                
+                <div class="form-group mr-3">
+                    <label for="search" class="mr-2">{% trans 'Search' %}:</label>
+                    <input type="text" class="form-control" id="search" name="search" value="{{ search_query }}" placeholder="{% trans 'Search notifications...' %}">
+                </div>
+                
+                <button type="submit" class="btn btn-primary">{% trans 'Filter' %}</button>
+                <a href="{% url 'notifications:notification_list' %}" class="btn btn-secondary ml-2">{% trans 'Reset' %}</a>
+            </form>
+        </div>
+    </div>
+    
+    <!-- 通知列表 -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">{% trans 'Notification List' %}</h5>
+            <a href="#" id="mark-all-as-read" class="btn btn-sm btn-outline-success">{% trans 'Mark All as Read' %}</a>
+        </div>
+        
+        <div class="card-body">
+            {% if notifications %}
+                <div class="list-group">
+                    {% for notification in notifications %}
+                        <div class="list-group-item {% if not notification.is_read %}list-group-item-warning{% endif %}">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h5 class="mb-1">
+                                    {% if not notification.is_read %}<span class="badge badge-warning">{% trans 'Unread' %}</span>{% endif %}
+                                    {{ notification.title }}
+                                </h5>
+                                <small class="text-muted">{{ notification.created_at|timesince }} {% trans 'ago' %}</small>
+                            </div>
+                            <p class="mb-1">{{ notification.content|truncatewords:20 }}</p>
+                            <small class="text-muted">
+                                {% if notification.sender %}{% trans 'From' %}: {{ notification.sender.username }}{% endif %}
+                                {% if notification.notification_type %} | {% trans 'Type' %}: {{ notification.get_notification_type_display }}{% endif %}
+                            </small>
+                            
+                            <div class="mt-2">
+                                {% if notification.target_url %}
+                                    <a href="{{ notification.target_url }}" class="btn btn-sm btn-primary">{% trans 'View' %}</a>
+                                {% endif %}
+                                {% if not notification.is_read %}
+                                    <a href="{% url 'notifications:mark_as_read' notification.id %}" class="btn btn-sm btn-outline-success mark-as-read" data-id="{{ notification.id }}">{% trans 'Mark as Read' %}</a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+                
+                <!-- 分页 -->
+                {% if notifications.paginator.num_pages > 1 %}
+                    <nav aria-label="Page navigation" class="mt-4">
+                        <ul class="pagination justify-content-center">
+                            {% if notifications.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ notifications.previous_page_number }}" aria-label="Previous">
+                                        <span aria-hidden="true">&laquo;</span>
+                                    </a>
+                                </li>
+                            {% endif %}
+                            
+                            {% for page_num in notifications.paginator.page_range %}
+                                <li class="page-item {% if page_num == notifications.number %}active{% endif %}">
+                                    <a class="page-link" href="?page={{ page_num }}">{{ page_num }}</a>
+                                </li>
+                            {% endfor %}
+                            
+                            {% if notifications.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ notifications.next_page_number }}" aria-label="Next">
+                                        <span aria-hidden="true">&raquo;</span>
+                                    </a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                {% endif %}
+            {% else %}
+                <p class="text-center text-muted">{% trans 'No notifications found.' %}</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    // 标记单条通知为已读
+    document.querySelectorAll('.mark-as-read').forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const notificationId = this.dataset.id;
+            const listItem = this.closest('.list-group-item');
+            
+            fetch(`{% url 'notifications:mark_as_read' 0 %}`.replace('0', notificationId), {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    listItem.classList.remove('list-group-item-warning');
+                    listItem.querySelector('.badge-warning').remove();
+                    this.remove();
+                }
+            });
+        });
+    });
+    
+    // 标记所有通知为已读
+    document.getElementById('mark-all-as-read').addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        fetch(`{% url 'notifications:mark_all_as_read' %}`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                document.querySelectorAll('.list-group-item-warning').forEach(item => {
+                    item.classList.remove('list-group-item-warning');
+                });
+                document.querySelectorAll('.badge-warning').forEach(badge => {
+                    badge.remove();
+                });
+                document.querySelectorAll('.mark-as-read').forEach(link => {
+                    link.remove();
+                });
+            }
+        });
+    });
+    
+    // 获取CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+{% endblock %}
+{% endblock %}

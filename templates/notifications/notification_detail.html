@@ -1,0 +1,43 @@
+{% extends 'share_layout/base.html' %}
+{% load i18n %}
+
+{% block title %}{{ notification.title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h1 class="h4 mb-0">{{ notification.title }}</h1>
+        </div>
+        
+        <div class="card-body">
+            <p class="mb-4">{{ notification.content }}</p>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <p class="text-muted">
+                        <strong>{% trans 'Type' %}:</strong> {{ notification.get_notification_type_display }}
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <p class="text-muted">
+                        <strong>{% trans 'Created At' %}:</strong> {{ notification.created_at }}
+                    </p>
+                </div>
+            </div>
+            
+            {% if notification.sender %}
+                <p class="text-muted">
+                    <strong>{% trans 'From' %}:</strong> {{ notification.sender.username }}
+                </p>
+            {% endif %}
+            
+            {% if notification.target_url %}
+                <a href="{{ notification.target_url }}" class="btn btn-primary mt-3">{% trans 'Go to Target' %}</a>
+            {% endif %}
+            
+            <a href="{% url 'notifications:notification_list' %}" class="btn btn-secondary mt-3">{% trans 'Back to List' %}</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
