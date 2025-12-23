@@ -25,6 +25,16 @@
 
                 <a href="{% url "blog:archives" %}">{% trans 'Article archive' %}</a>
             </li>
+            {% if user.is_authenticated %}
+                <li class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-has-children">
+                    <a href="{% url 'account:notification_list' %}">
+                        {% trans 'Notifications' %}
+                        {% if user.notifications.filter(is_read=False).count > 0 %}
+                            <span class="badge badge-danger">{{ user.notifications.filter(is_read=False).count }}</span>
+                        {% endif %}
+                    </a>
+                </li>
+            {% endif %}
         </ul>
     </div>
 </nav><!-- #site-navigation -->

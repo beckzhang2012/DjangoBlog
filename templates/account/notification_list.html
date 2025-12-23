@@ -1,0 +1,47 @@
+{% extends 'share_layout/base_account.html' %}
+{% load static %}
+{% load i18n %}
+
+{% block title %}{% trans 'Notifications' %}{% endblock %}
+
+{% block main %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-8 col-md-offset-2">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <h3 class="panel-title">{% trans 'Notifications' %}</h3>
+                </div>
+                <div class="panel-body">
+                    {% if notifications %}
+                        <div class="list-group">
+                            {% for notification in notifications %}
+                                <a href="{% url 'account:notification_detail' notification.id %}" class="list-group-item {% if not notification.is_read %}list-group-item-info{% endif %}">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h5 class="mb-1">
+                                            {% if notification.type == 'comment_reply' %}
+                                                <i class="fa fa-comment"></i> {% trans 'Comment Reply' %}
+                                            {% elif notification.type == 'system_notice' %}
+                                                <i class="fa fa-bell"></i> {% trans 'System Notice' %}
+                                            {% elif notification.type == 'article_approved' %}
+                                                <i class="fa fa-check"></i> {% trans 'Article Approved' %}
+                                            {% else %}
+                                                <i class="fa fa-info"></i> {% trans 'Notification' %}
+                                            {% endif %}
+                                        </h5>
+                                        <small>{{ notification.created_time|date:"Y-m-d H:i" }}</small>
+                                    </div>
+                                    <p class="mb-1">{{ notification.title }}</p>
+                                    <small>{{ notification.content|truncatechars:100 }}</small>
+                                </a>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-center">{% trans 'No notifications.' %}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
