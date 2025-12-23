@@ -5,8 +5,9 @@ from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect
 from django.views.generic.edit import FormView
+from django.utils.translation import gettext_lazy as _
 
-from accounts.models import BlogUser
+from accounts.models import BlogUser, Notification
 from blog.models import Article
 from .forms import CommentForm
 from .models import Comment
@@ -58,6 +59,24 @@ class CommentPostView(FormView):
             comment.parent_comment = parent_comment
 
         comment.save(True)
+        
+        # 发送评论回复通知
+        if comment.parent_comment:
+            parent_comment = comment.parent_comment
+            if parent_comment.author != comment.author:  # 避免给自己发通知
+                # 创建通知
+                notification = Notification()
+                notification.title = _('Comment Reply')
+                notification.content = _('You have a comment reply from %(username)s: %(content)s' % {
+                    'username': comment.author.username,
+                    'content': comment.body[:50] + '...' if len(comment.body) > 50 else comment.body
+                })
+                notification.type = 'comment_reply'
+                notification.user = parent_comment.author
+                notification.related_object_id = article.pk
+                notification.related_object_type = 'article'
+                notification.save()
+        
         return HttpResponseRedirect(
             "%s#div-comment-%d" %
             (article.get_absolute_url(), comment.pk))
