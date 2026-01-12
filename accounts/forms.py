@@ -5,7 +5,7 @@ from django.core.exceptions import ValidationError
 from django.forms import widgets
 from django.utils.translation import gettext_lazy as _
 from . import utils
-from .models import BlogUser
+from .models import BlogUser, Notification
 
 
 class LoginForm(AuthenticationForm):
@@ -98,7 +98,77 @@ class ForgetPasswordForm(forms.Form):
         ).exists():
             # todo 这里的报错提示可以判断一个邮箱是不是注册过，如果不想暴露可以修改
             raise ValidationError(_("email does not exist"))
-        return user_email
+
+
+class SystemNotificationForm(forms.Form):
+    """系统通知表单"""
+    title = forms.CharField(
+        label=_('Title'),
+        widget=forms.TextInput(
+            attrs={
+                'class': 'form-control',
+                'placeholder': _('Notification title')
+            }
+        ),
+        max_length=200,
+        required=True
+    )
+    content = forms.CharField(
+        label=_('Content'),
+        widget=forms.Textarea(
+            attrs={
+                'class': 'form-control',
+                'placeholder': _('Notification content'),
+                'rows': 5
+            }
+        ),
+        required=True
+    )
+    user = forms.ModelChoiceField(
+        label=_('User'),
+        queryset=BlogUser.objects.all(),
+        widget=forms.Select(
+            attrs={
+                'class': 'form-control'
+            }
+        ),
+        required=False,
+        help_text=_('Leave empty to send to all users')
+    )
+    type = forms.ChoiceField(
+        label=_('Type'),
+        choices=Notification.TYPE_CHOICES,
+        widget=forms.Select(
+            attrs={
+                'class': 'form-control'
+            }
+        ),
+        required=True,
+        initial='system_notice'
+    )
+
+
+class ForgetPasswordCodeForm(forms.Form):
+    email = forms.EmailField(
+        label=_('Email'),
+    )
+    code = forms.CharField(
+        label=_('Verification Code'),
+        widget=forms.TextInput(
+            attrs={
+                'class': 'form-control',
+                'placeholder': _('Please enter the verification code')
+            }
+        ),
+        max_length=6,
+        required=True
+    )
+
+    def clean_email(self):
+        email = self.cleaned_data.get("email")
+        if not BlogUser.objects.filter(email=email).exists():
+            raise ValidationError(_("email does not exist"))
+        return email
 
     def clean_code(self):
         code = self.cleaned_data.get("code")

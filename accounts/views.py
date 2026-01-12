@@ -23,8 +23,8 @@ from django.views.generic import FormView, RedirectView
 
 from djangoblog.utils import send_email, get_sha256, get_current_site, generate_code, delete_sidebar_cache
 from . import utils
-from .forms import RegisterForm, LoginForm, ForgetPasswordForm, ForgetPasswordCodeForm
-from .models import BlogUser
+from .forms import RegisterForm, LoginForm, ForgetPasswordForm, ForgetPasswordCodeForm, SystemNotificationForm
+from .models import BlogUser, Notification
 
 logger = logging.getLogger(__name__)
 
@@ -98,6 +98,119 @@ class LoginView(FormView):
     template_name = 'account/login.html'
     success_url = '/'
     redirect_field_name = REDIRECT_FIELD_NAME
+
+
+class SystemNotificationView(View):
+    """系统通知发送视图"""
+    template_name = 'account/system_notification.html'
+    
+    @method_decorator(csrf_protect)
+    def dispatch(self, *args, **kwargs):
+        if not self.request.user.is_staff:
+            return HttpResponseForbidden(_('You have no permission to access this page.'))
+        return super(SystemNotificationView, self).dispatch(*args, **kwargs)
+    
+    def get(self, request, *args, **kwargs):
+        form = SystemNotificationForm()
+        return render(request, self.template_name, {'form': form})
+    
+    def post(self, request, *args, **kwargs):
+        form = SystemNotificationForm(request.POST)
+        if form.is_valid():
+            title = form.cleaned_data['title']
+            content = form.cleaned_data['content']
+            user = form.cleaned_data['user']
+            type = form.cleaned_data['type']
+            
+            # 创建通知
+            if user:
+                # 发送给单个用户
+                notification = Notification()
+                notification.title = title
+                notification.content = content
+                notification.type = type
+                notification.user = user
+                notification.save()
+            else:
+                # 发送给所有用户
+                users = BlogUser.objects.all()
+                for user in users:
+                    notification = Notification()
+                    notification.title = title
+                    notification.content = content
+                    notification.type = type
+                    notification.user = user
+                    notification.save()
+            
+            # 重定向到通知列表
+            return HttpResponseRedirect(reverse('account:notification_list'))
+        
+        return render(request, self.template_name, {'form': form})
+
+
+class NotificationListView(View):
+    """通知列表视图"""
+    template_name = 'account/notification_list.html'
+    
+    @method_decorator(csrf_protect)
+    def dispatch(self, *args, **kwargs):
+        if not self.request.user.is_authenticated:
+            return HttpResponseRedirect(reverse('account:login'))
+        return super(NotificationListView, self).dispatch(*args, **kwargs)
+    
+    def get(self, request, *args, **kwargs):
+        user = request.user
+        notifications = Notification.objects.filter(user=user)
+        
+        # 标记所有通知为已读
+        notifications.update(is_read=True)
+        
+        return render(request, self.template_name, {'notifications': notifications})
+
+
+class NotificationDetailView(View):
+    """通知详情视图"""
+    template_name = 'account/notification_detail.html'
+    
+    @method_decorator(csrf_protect)
+    def dispatch(self, *args, **kwargs):
+        if not self.request.user.is_authenticated:
+            return HttpResponseRedirect(reverse('account:login'))
+        return super(NotificationDetailView, self).dispatch(*args, **kwargs)
+    
+    def get(self, request, *args, **kwargs):
+        notification_id = kwargs.get('id')
+        notification = get_object_or_404(Notification, pk=notification_id)
+        
+        # 标记为已读
+        if not notification.is_read:
+            notification.is_read = True
+            notification.save()
+        
+        return render(request, self.template_name, {'notification': notification})
+
+
+def mark_notification_as_read(request, notification_id):
+    """标记单个通知为已读"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'status': 'error', 'message': _('You must be logged in to mark notifications as read.')})
+    
+    try:
+        notification = Notification.objects.get(pk=notification_id, user=request.user)
+        notification.is_read = True
+        notification.save()
+        return JsonResponse({'status': 'success'})
+    except Notification.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': _('Notification not found.')})
+
+
+def mark_all_notifications_as_read(request):
+    """标记所有通知为已读"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'status': 'error', 'message': _('You must be logged in to mark notifications as read.')})
+    
+    Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
+    return JsonResponse({'status': 'success'})
     login_ttl = 2626560  # 一个月的时间
 
     @method_decorator(sensitive_post_parameters('password'))

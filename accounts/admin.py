@@ -1,11 +1,12 @@
 from django import forms
+from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.forms import UserChangeForm
 from django.contrib.auth.forms import UsernameField
 from django.utils.translation import gettext_lazy as _
 
 # Register your models here.
-from .models import BlogUser
+from .models import BlogUser, Notification
 
 
 class BlogUserCreationForm(forms.ModelForm):
@@ -58,3 +59,32 @@ class BlogUserAdmin(UserAdmin):
     list_display_links = ('id', 'username')
     ordering = ('-id',)
     search_fields = ('username', 'nickname', 'email')
+
+
+class NotificationAdmin(admin.ModelAdmin):
+    list_display = ('id', 'title', 'type', 'user', 'is_read', 'creation_time')
+    list_display_links = ('id', 'title')
+    ordering = ('-creation_time',)
+    search_fields = ('title', 'content', 'user__username', 'user__email')
+    list_filter = ('type', 'is_read', 'creation_time')
+    readonly_fields = ('creation_time',)
+    
+    fieldsets = (
+        (_('Basic Information'), {
+            'fields': ('title', 'content', 'type')
+        }),
+        (_('User Information'), {
+            'fields': ('user', 'is_read')
+        }),
+        (_('Related Object'), {
+            'fields': ('related_object_id', 'related_object_type')
+        }),
+        (_('Time Information'), {
+            'fields': ('creation_time',)
+        }),
+    )
+
+
+# 注册模型
+admin.site.register(BlogUser, BlogUserAdmin)
+admin.site.register(Notification, NotificationAdmin)

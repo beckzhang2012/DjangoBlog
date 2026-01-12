@@ -1,0 +1,44 @@
+{% extends 'share_layout/base_account.html' %}
+{% load static %}
+{% load i18n %}
+
+{% block title %}{% trans 'Notification Detail' %}{% endblock %}
+
+{% block main %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-8 col-md-offset-2">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <h3 class="panel-title">{% trans 'Notification Detail' %}</h3>
+                </div>
+                <div class="panel-body">
+                    <h4 class="mb-3">
+                        {% if notification.type == 'comment_reply' %}
+                            <i class="fa fa-comment"></i> {% trans 'Comment Reply' %}
+                        {% elif notification.type == 'system_notice' %}
+                            <i class="fa fa-bell"></i> {% trans 'System Notice' %}
+                        {% elif notification.type == 'article_approved' %}
+                            <i class="fa fa-check"></i> {% trans 'Article Approved' %}
+                        {% else %}
+                            <i class="fa fa-info"></i> {% trans 'Notification' %}
+                        {% endif %}
+                    </h4>
+                    <p class="lead">{{ notification.title }}</p>
+                    <div class="well well-sm">
+                        {{ notification.content|linebreaks }}
+                    </div>
+                    <p class="text-muted">
+                        <small>{% trans 'Created at' %}: {{ notification.created_time|date:"Y-m-d H:i" }}</small>
+                    </p>
+                    <hr>
+                    <a href="{% url 'account:notification_list' %}" class="btn btn-default">{% trans 'Back to Notifications' %}</a>
+                    {% if notification.article %}
+                        <a href="{{ notification.article.get_absolute_url }}" class="btn btn-primary">{% trans 'View Article' %}</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
