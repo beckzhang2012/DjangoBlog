@@ -1,0 +1,124 @@
+{% extends 'admin/base_site.html' %}
+{% load i18n static %}
+
+{% block extrastyle %}
+    {{ block.super }}
+    <style>
+        .diff-add { background-color: #d4edda; color: #155724; }
+        .diff-remove { background-color: #f8d7da; color: #721c24; }
+        .diff-unchanged { background-color: #f8f9fa; color: #6c757d; }
+        .diff-header { font-weight: bold; background-color: #e9ecef; }
+        .diff-container { font-family: monospace; white-space: pre-wrap; padding: 10px; margin: 10px 0; border: 1px solid #dee2e6; border-radius: 4px; }
+        .version-info { margin-bottom: 20px; }
+    </style>
+{% endblock %}
+
+{% block breadcrumbs %}
+    <div class="breadcrumbs">
+        <a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
+        &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+        &rsaquo; <a href="{% url 'admin:blog_articleversion_changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+        &rsaquo; {% translate 'Version Compare' %}
+    </div>
+{% endblock %}
+
+{% block content %}
+    <div id="content-main">
+        <div class="module">
+            <h2>版本对比: {{ version1.article.title }}</h2>
+            
+            <div class="version-info">
+                <table class="table">
+                    <tr>
+                        <th>版本号</th>
+                        <td>{{ version1.version_number }}</td>
+                        <td>{{ version2.version_number }}</td>
+                    </tr>
+                    <tr>
+                        <th>编辑者</th>
+                        <td>{{ version1.author.username }}</td>
+                        <td>{{ version2.author.username }}</td>
+                    </tr>
+                    <tr>
+                        <th>编辑时间</th>
+                        <td>{{ version1.creation_time }}</td>
+                        <td>{{ version2.creation_time }}</td>
+                    </tr>
+                    <tr>
+                        <th>变更类型</th>
+                        <td>{{ version1.change_type }}</td>
+                        <td>{{ version2.change_type }}</td>
+                    </tr>
+                    {% if version1.edit_summary or version2.edit_summary %}
+                    <tr>
+                        <th>编辑摘要</th>
+                        <td>{{ version1.edit_summary|default:'' }}</td>
+                        <td>{{ version2.edit_summary|default:'' }}</td>
+                    </tr>
+                    {% endif %}
+                </table>
+            </div>
+            
+            {% if title_diff %}
+            <div class="module">
+                <h3>标题差异</h3>
+                <div class="diff-container">
+                    {% for line in title_diff %}
+                        {% if line.startswith('+ ') %}
+                            <span class="diff-add">{{ line }}</span><br>
+                        {% elif line.startswith('- ') %}
+                            <span class="diff-remove">{{ line }}</span><br>
+                        {% elif line.startswith('  ') %}
+                            <span class="diff-unchanged">{{ line }}</span><br>
+                        {% elif line.startswith('? ') %}
+                            <span class="diff-header">{{ line }}</span><br>
+                        {% else %}
+                            {{ line }}<br>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% else %}
+            <div class="module">
+                <h3>标题无差异</h3>
+                <p>{{ version1.title }}</p>
+            </div>
+            {% endif %}
+            
+            {% if body_diff %}
+            <div class="module">
+                <h3>正文差异</h3>
+                <div class="diff-container">
+                    {% for line in body_diff %}
+                        {% if line.startswith('+ ') %}
+                            <span class="diff-add">{{ line }}</span><br>
+                        {% elif line.startswith('- ') %}
+                            <span class="diff-remove">{{ line }}</span><br>
+                        {% elif line.startswith('  ') %}
+                            <span class="diff-unchanged">{{ line }}</span><br>
+                        {% elif line.startswith('? ') %}
+                            <span class="diff-header">{{ line }}</span><br>
+                        {% else %}
+                            {{ line }}<br>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% else %}
+            <div class="module">
+                <h3>正文无差异</h3>
+                <p>{{ version1.body|truncatechars:500 }}</p>
+            </div>
+            {% endif %}
+            
+            <div class="module">
+                <div class="submit-row">
+                    <a href="{% url 'admin:blog_articleversion_changelist' %}" class="button">返回版本列表</a>
+                    <a href="{% url 'admin:blog_article_change' version1.article.id %}" class="button">编辑当前文章</a>
+                    <a href="{% url 'admin:restore_version' version1.id %}" class="button default">恢复到版本 {{ version1.version_number }}</a>
+                    <a href="{% url 'admin:restore_version' version2.id %}" class="button default">恢复到版本 {{ version2.version_number }}</a>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
