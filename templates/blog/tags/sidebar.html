@@ -119,6 +119,11 @@
         <ul>
             <li><a href="/admin/" rel="nofollow">{% trans 'management site' %}</a></li>
             {% if user.is_authenticated %}
+                <li><a href="{% url "notifications:list" %}" rel="nofollow">{% trans 'Notifications' %}
+                    {% if unread_notification_count > 0 %}
+                        <span class="badge badge-danger">{{ unread_notification_count }}</span>
+                    {% endif %}
+                </a></li>
                 <li><a href="{% url "account:logout" %}" rel="nofollow">{% trans 'logout' %}</a>
                 </li>
 

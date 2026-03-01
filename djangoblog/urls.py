@@ -64,6 +64,7 @@ urlpatterns += i18n_patterns(
     re_path(r'', include('comments.urls', namespace='comment')),
     re_path(r'', include('accounts.urls', namespace='account')),
     re_path(r'', include('oauth.urls', namespace='oauth')),
+    re_path(r'', include('notifications.urls', namespace='notifications')),
     re_path(r'^sitemap\.xml$', sitemap, {'sitemaps': sitemaps},
             name='django.contrib.sitemaps.views.sitemap'),
     re_path(r'^feed/$', DjangoBlogFeed()),

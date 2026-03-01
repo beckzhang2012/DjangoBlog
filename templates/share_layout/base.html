@@ -56,6 +56,22 @@
         <link rel="stylesheet" href="{% static 'blog/css/nprogress.css' %}">
         {% block compress_css %}
         {% endblock %}
+        <style>
+            .badge {
+                display: inline-block;
+                padding: 2px 6px;
+                font-size: 12px;
+                font-weight: bold;
+                line-height: 1;
+                color: #fff;
+                text-align: center;
+                white-space: nowrap;
+                vertical-align: middle;
+                background-color: #d9534f;
+                border-radius: 10px;
+                margin-left: 5px;
+            }
+        </style>
         <!-- 插件CSS文件 - 集成到压缩系统 -->
         {% plugin_compressed_css %}
     {% endcompress %}
