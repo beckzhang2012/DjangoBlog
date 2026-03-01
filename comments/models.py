@@ -8,6 +8,13 @@ from blog.models import Article
 
 # Create your models here.
 
+class AuditStatus(models.TextChoices):
+    PENDING = 'pending', _('Pending')
+    APPROVED = 'approved', _('Approved')
+    REJECTED = 'rejected', _('Rejected')
+    NEED_MODIFICATION = 'need_modification', _('Need Modification')
+
+
 class Comment(models.Model):
     body = models.TextField('正文', max_length=300)
     creation_time = models.DateTimeField(_('creation time'), default=now)
@@ -28,6 +35,13 @@ class Comment(models.Model):
         on_delete=models.CASCADE)
     is_enable = models.BooleanField(_('enable'),
                                     default=False, blank=False, null=False)
+    audit_status = models.CharField(
+        _('audit status'),
+        max_length=20,
+        choices=AuditStatus.choices,
+        default=AuditStatus.PENDING,
+        help_text=_('Comment audit status')
+    )
 
     class Meta:
         ordering = ['-id']
@@ -37,3 +51,43 @@ class Comment(models.Model):
 
     def __str__(self):
         return self.body
+
+
+class CommentAuditHistory(models.Model):
+    comment = models.ForeignKey(
+        Comment,
+        verbose_name=_('comment'),
+        on_delete=models.CASCADE,
+        related_name='audit_histories'
+    )
+    auditor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name=_('auditor'),
+        on_delete=models.CASCADE
+    )
+    audit_time = models.DateTimeField(_('audit time'), default=now)
+    old_status = models.CharField(
+        _('old status'),
+        max_length=20,
+        choices=AuditStatus.choices
+    )
+    new_status = models.CharField(
+        _('new status'),
+        max_length=20,
+        choices=AuditStatus.choices
+    )
+    audit_opinion = models.TextField(
+        _('audit opinion'),
+        max_length=500,
+        blank=True,
+        null=True,
+        help_text=_('Auditor comments and opinions')
+    )
+
+    class Meta:
+        ordering = ['-audit_time']
+        verbose_name = _('comment audit history')
+        verbose_name_plural = _('comment audit histories')
+
+    def __str__(self):
+        return f"{self.auditor.username} - {self.old_status} → {self.new_status} at {self.audit_time}"
