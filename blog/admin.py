@@ -7,6 +7,7 @@ from django.utils.translation import gettext_lazy as _
 
 # Register your models here.
 from .models import Article, Category, Tag, Links, SideBar, BlogSettings
+from .models.article_version import ArticleVersion
 
 
 class ArticleForm(forms.ModelForm):
@@ -48,16 +49,17 @@ class ArticlelAdmin(admin.ModelAdmin):
         'title',
         'author',
         'link_to_category',
-        'creation_time',
+        'created_time',
         'views',
         'status',
         'type',
-        'article_order')
+        'article_order',
+        'version_info')
     list_display_links = ('id', 'title')
     list_filter = ('status', 'type', 'category')
-    date_hierarchy = 'creation_time'
+    date_hierarchy = 'created_time'
     filter_horizontal = ('tags',)
-    exclude = ('creation_time', 'last_modify_time')
+    exclude = ('created_time', 'modified_time')
     view_on_site = True
     actions = [
         makr_article_publish,
@@ -91,6 +93,19 @@ class ArticlelAdmin(admin.ModelAdmin):
             site = get_current_site().domain
             return site
 
+    def version_info(self, obj):
+        """显示文章版本信息"""
+        versions = obj.versions.order_by('-version_number')
+        if versions:
+            latest_version = versions.first()
+            return format_html(
+                'Version: {} - {}',
+                latest_version.version_number,
+                latest_version.created_at.strftime('%Y-%m-%d %H:%M')
+            )
+        return 'No versions'
+    version_info.short_description = _('Version Info')
+
 
 class TagAdmin(admin.ModelAdmin):
     exclude = ('slug', 'last_mod_time', 'creation_time')
@@ -101,14 +116,46 @@ class CategoryAdmin(admin.ModelAdmin):
     exclude = ('slug', 'last_mod_time', 'creation_time')
 
 
+class ArticleVersionAdmin(admin.ModelAdmin):
+    list_per_page = 20
+    list_display = (
+        'id',
+        'article',
+        'version_number',
+        'author',
+        'created_at',
+        'is_active'
+    )
+    list_display_links = ('id', 'article', 'version_number')
+    list_filter = ('is_active', 'created_at', 'author')
+    search_fields = ('article__title', 'title', 'body')
+    date_hierarchy = 'created_at'
+    raw_id_fields = ('article', 'author',)
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj:
+            return ['article', 'version_number', 'created_at']
+        return []
+
+
 class LinksAdmin(admin.ModelAdmin):
     exclude = ('last_mod_time', 'creation_time')
 
 
 class SideBarAdmin(admin.ModelAdmin):
-    list_display = ('name', 'content', 'is_enable', 'sequence')
+    list_display = ('name', 'content', 'is_enabled', 'sequence')
     exclude = ('last_mod_time', 'creation_time')
 
 
 class BlogSettingsAdmin(admin.ModelAdmin):
     pass
+
+
+# Register models
+admin.site.register(Article, ArticlelAdmin)
+admin.site.register(ArticleVersion, ArticleVersionAdmin)
+admin.site.register(Category, CategoryAdmin)
+admin.site.register(Tag, TagAdmin)
+admin.site.register(Links, LinksAdmin)
+admin.site.register(SideBar, SideBarAdmin)
+admin.site.register(BlogSettings, BlogSettingsAdmin)
